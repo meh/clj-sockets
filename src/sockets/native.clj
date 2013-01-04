@@ -45,7 +45,7 @@
    :write 1
    :both  2})
 
-(defmacro defnative [func ret-type args-type]
+(defmacro ^:private defnative [func ret-type args-type]
   `(defn ~func [& args#]
      (.invoke (Function/getFunction "c" (name '~func)) ~ret-type (to-array args#))))
 
