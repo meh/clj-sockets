@@ -47,7 +47,7 @@
 
 (defmacro ^:private defnative [func ret-type args-type]
   `(defn ~func [& args#]
-     (.invoke (Function/getFunction "c" (name '~func)) ~ret-type (to-array args#))))
+     (.invoke (Function/getFunction "c" ~(name func)) ~ret-type (to-array args#))))
 
 (defnative socket
   Integer
