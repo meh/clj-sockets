@@ -117,12 +117,12 @@
 (defn ^:private to-unix-sockaddr [path]
   (if (> (count path) 107)
     (throw (IllegalArgumentException. "path is too long"))
-    (doto (Memory. (+ 4 108))
+    (doto (Memory. (+ 2 #_sun_family 108 #_sun_path))
       (.write 0 (short-array (short (:unix domain))) 0 1)
       (.write 2 (char-array path) 0 1))))
 
 (defn ^:private to-inet-sockaddr [ip port]
-  (doto (Memory. 16)
+  (doto (Memory. (+ 2 #_sin_family 2 #_sin_port 4 #_sin_addr 8 #_sin_zero))
     (.write 0 (short-array (short (:inet domain))) 0 1)
     (.write 2 (network-order (short port)) 0 2)
     (.write 4 (.getAddress (if (= (type ip) Inet4Address) ip (Inet4Address/getByName ip))) 0 4)))
@@ -130,7 +130,7 @@
 (defn ^:private to-inet6-sockaddr
   ([ip port] (to-inet6-sockaddr ip port 0 0))
   ([ip port flow-info scope-id]
-    (doto (Memory. 28)
+    (doto (Memory. (+ 2 #_sin6_family 2 #_sin6_port 4 #_sin6_flowinfo 16 #_sin6_addr 4 #_sin6_scope_id))
       (.write 0  (short-array (short (:inet6 domain))) 0 1)
       (.write 2  (network-order (short port)) 0 2)
       (.write 4  (network-order (int flow-info)) 0 4)
