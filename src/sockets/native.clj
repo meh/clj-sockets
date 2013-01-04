@@ -40,6 +40,11 @@
    :tcp  6
    :udp  17})
 
+(defonce shutdown-mode
+  {:read  0
+   :write 1
+   :both  2})
+
 (defmacro defnative [func ret-type args-type]
   `(defn ~func [& args#]
      (.invoke (Function/getFunction "c" (name '~func)) ~ret-type (to-array args#))))
@@ -68,6 +73,10 @@
   Integer
   [Integer])
 
+(defnative shutdown
+  Integer
+  [Integer Integer])
+
 (defnative recv
   Long
   [Integer Pointer Long Integer])
@@ -84,33 +93,61 @@
   Long
   [Integer Pointer Long Integer Pointer Pointer])
 
+(defnative setsockopt
+  Integer
+  [Integer Integer Integer Pointer Integer])
+
+(defnative getsockopt
+  Integer
+  [Integer Integer Integer Pointer Pointer])
+
+(defnative getsockname
+  Integer
+  [Integer Pointer Pointer])
+
+(defnative getpeername
+  Integer
+  [Integer Pointer Pointer])
+
 (defn ^:private network-order [number]
-  (.array (case (type number)
-            Short (.putShort (.order (ByteBuffer/allocate 2) ByteOrder/BIG_ENDIAN) number)
+  (.array (condp instance? number
+            Short   (.putShort (.order (ByteBuffer/allocate 2) ByteOrder/BIG_ENDIAN) number)
             Integer (.putInt (.order (ByteBuffer/allocate 4) ByteOrder/BIG_ENDIAN) number))))
 
-(defn ^:private make-unix-sockaddr [path]
+(defn ^:private to-unix-sockaddr [path]
   (if (> (count path) 107)
     (throw (IllegalArgumentException. "path is too long"))
     (doto (Memory. (+ 4 108))
       (.write 0 (short-array (short (:unix domain))) 0 1)
       (.write 2 (char-array path) 0 1))))
 
-(defn ^:private make-inet-sockaddr [ip port]
+(defn ^:private to-inet-sockaddr [ip port]
   (doto (Memory. 16)
     (.write 0 (short-array (short (:inet domain))) 0 1)
-    (.write 2 (network-order port) 0 4)
-    (.write 4 (.getAddress (Inet4Address/getByName ip)) 0 4)))
+    (.write 2 (network-order (short port)) 0 2)
+    (.write 4 (.getAddress (if (= (type ip) Inet4Address) ip (Inet4Address/getByName ip))) 0 4)))
 
-(defn ^:private make-inet6-sockaddr
-  ([ip port] (make-inet6-sockaddr ip port 0 0))
+(defn ^:private to-inet6-sockaddr
+  ([ip port] (to-inet6-sockaddr ip port 0 0))
   ([ip port flow-info scope-id]
     (doto (Memory. 28)
       (.write 0  (short-array (short (:inet6 domain))) 0 1)
-      (.write 2  (network-order port) 0 2)
-      (.write 4  (network-order flow-info) 0 4)
-      (.write 8  (.getAddress (Inet6Address/getByName ip)) 0 16)
-      (.write 24 (network-order scope-id) 0 4))))
+      (.write 2  (network-order (short port)) 0 2)
+      (.write 4  (network-order (int flow-info)) 0 4)
+      (.write 8  (.getAddress (if (= (type ip) Inet6Address) ip (Inet6Address/getByName ip))) 0 16)
+      (.write 24 (network-order (int scope-id)) 0 4))))
 
-(defn make-sockaddr [type & args]
-  (apply (ns-resolve 'sockets.native (symbol (str "make-" (name type) "-sockaddr"))) args))
+(defn to-sockaddr [type & args]
+  (apply (ns-resolve 'sockets.native (symbol (str "to-" (name type) "-sockaddr"))) args))
+
+(defn ^:private from-unix-sockaddr [addr]
+  addr)
+
+(defn ^:private from-inet-sockaddr [addr]
+  addr)
+
+(defn ^:private from-inet6-sockaddr [addr]
+  addr)
+
+(defn from-sockaddr [type addr]
+  ((symbol (str "from-" (name type) "-sockaddr")) addr))
