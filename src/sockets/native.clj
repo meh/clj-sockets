@@ -150,4 +150,4 @@
   addr)
 
 (defn from-sockaddr [type addr]
-  ((symbol (str "from-" (name type) "-sockaddr")) addr))
+  ((ns-resolve 'sockets.native (symbol (str "from-" (name type) "-sockaddr"))) addr))
