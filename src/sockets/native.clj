@@ -16,7 +16,10 @@
 ;; along with clj-sockets If not, see <http://www.gnu.org/licenses/>.
 
 (ns sockets.native
-  (:import (com.sun.jna Function NativeLibrary Pointer)))
+  (:import
+    (java.net Inet4Address Inet6Address)
+    (java.nio ByteBuffer ByteOrder)
+    (com.sun.jna Function NativeLibrary Pointer Memory)))
 
 (defonce domain
   {:unix  1
@@ -26,7 +29,7 @@
             "FreeBSD"             28
             ("Mac OS" "Mac OS X") 30)})
 
-(defonce type
+(defonce mode
   {:stream   1
    :datagram 2
    :raw      3})
@@ -36,8 +39,6 @@
    :icmp 1
    :tcp  6
    :udp  17})
-
-; sockaddr (unsigned short, char[14])
 
 (defmacro defnative [func ret-type args-type]
   `(defn ~func [& args#]
@@ -82,3 +83,34 @@
 (defnative sendto
   Long
   [Integer Pointer Long Integer Pointer Pointer])
+
+(defn ^:private network-order [number]
+  (.array (case (type number)
+            Short (.putShort (.order (ByteBuffer/allocate 2) ByteOrder/BIG_ENDIAN) number)
+            Integer (.putInt (.order (ByteBuffer/allocate 4) ByteOrder/BIG_ENDIAN) number))))
+
+(defn ^:private make-unix-sockaddr [path]
+  (if (> (count path) 107)
+    (throw (IllegalArgumentException. "path is too long"))
+    (doto (Memory. (+ 4 108))
+      (.write 0 (short-array (short (:unix domain))) 0 1)
+      (.write 2 (char-array path) 0 1))))
+
+(defn ^:private make-inet-sockaddr [ip port]
+  (doto (Memory. 16)
+    (.write 0 (short-array (short (:inet domain))) 0 1)
+    (.write 2 (network-order port) 0 4)
+    (.write 4 (.getAddress (Inet4Address/getByName ip)) 0 4)))
+
+(defn ^:private make-inet6-sockaddr
+  ([ip port] (make-inet6-sockaddr ip port 0 0))
+  ([ip port flow-info scope-id]
+    (doto (Memory. 28)
+      (.write 0  (short-array (short (:inet6 domain))) 0 1)
+      (.write 2  (network-order port) 0 2)
+      (.write 4  (network-order flow-info) 0 4)
+      (.write 8  (.getAddress (Inet6Address/getByName ip)) 0 16)
+      (.write 24 (network-order scope-id) 0 4))))
+
+(defn make-sockaddr [type & args]
+  (apply (ns-resolve 'sockets.native (symbol (str "make-" (name type) "-sockaddr"))) args))
