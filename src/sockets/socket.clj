@@ -16,7 +16,7 @@
 ;; along with clj-sockets If not, see <http://www.gnu.org/licenses/>.
 
 (ns sockets.socket
-  (:refer-clojure :exclude [bytes send set get])
+  (:refer-clojure :exclude [send set get])
   (:import [java.nio ByteBuffer ByteOrder]))
 
 (defprotocol Socket
