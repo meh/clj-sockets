@@ -17,10 +17,9 @@
 
 (ns sockets.native
   (:refer-clojure :exclude [send])
-  (:import
-    [java.net Inet4Address Inet6Address]
-    [java.nio ByteBuffer ByteOrder]
-    [com.sun.jna Function NativeLibrary Pointer Memory]))
+  (:import [java.net Inet4Address Inet6Address]
+           [java.nio ByteBuffer ByteOrder]
+           [com.sun.jna Function NativeLibrary Pointer Memory]))
 
 (defonce domain
   {:unix  1
