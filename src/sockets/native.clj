@@ -16,10 +16,11 @@
 ;; along with clj-sockets If not, see <http://www.gnu.org/licenses/>.
 
 (ns sockets.native
+  (:refer-clojure :exclude [send])
   (:import
-    (java.net Inet4Address Inet6Address)
-    (java.nio ByteBuffer ByteOrder)
-    (com.sun.jna Function NativeLibrary Pointer Memory)))
+    [java.net Inet4Address Inet6Address]
+    [java.nio ByteBuffer ByteOrder]
+    [com.sun.jna Function NativeLibrary Pointer Memory]))
 
 (defonce domain
   {:unix  1
@@ -140,21 +141,24 @@
 (defn ^:private to-unix-sockaddr [path]
   (if (> (count path) 107)
     (throw (IllegalArgumentException. "path is too long"))
-    (doto (Memory. (+ 2 #_sun_family 108 #_sun_path))
-      (.write 0 (short-array (short (:unix domain))) 0 1)
+    (doto (create-unix-sockaddr)
+      (.clear)
+      (.write 0 (short-array [(short (:unix domain))]) 0 1)
       (.write 2 (char-array path) 0 1))))
 
 (defn ^:private to-inet-sockaddr [ip port]
-  (doto (Memory. (+ 2 #_sin_family 2 #_sin_port 4 #_sin_addr 8 #_sin_zero))
-    (.write 0 (short-array (short (:inet domain))) 0 1)
+  (doto (create-inet-sockaddr)
+    (.clear)
+    (.write 0 (short-array [(short (:inet domain))]) 0 1)
     (.write 2 (network-order (short port)) 0 2)
     (.write 4 (.getAddress (if (= (class ip) Inet4Address) ip (Inet4Address/getByName ip))) 0 4)))
 
 (defn ^:private to-inet6-sockaddr
   ([ip port] (to-inet6-sockaddr ip port 0 0))
   ([ip port flow-info scope-id]
-    (doto (Memory. (+ 2 #_sin6_family 2 #_sin6_port 4 #_sin6_flowinfo 16 #_sin6_addr 4 #_sin6_scope_id))
-      (.write 0  (short-array (short (:inet6 domain))) 0 1)
+    (doto (create-inet6-sockaddr)
+      (.clear)
+      (.write 0  (short-array [(short (:inet6 domain))]) 0 1)
       (.write 2  (network-order (short port)) 0 2)
       (.write 4  (network-order (int flow-info)) 0 4)
       (.write 8  (.getAddress (if (= (class ip) Inet6Address) ip (Inet6Address/getByName ip))) 0 16)
