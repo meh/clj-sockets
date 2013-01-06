@@ -16,7 +16,8 @@
 ;; along with clj-sockets If not, see <http://www.gnu.org/licenses/>.
 
 (ns sockets.address
-  (:require [sockets.native :as n]))
+  (:require [sockets.native :as n])
+  (:import  [java.net InetAddress Inet4Address Inet6Address]))
 
 (defprotocol Address
   (domain [this])
@@ -66,6 +67,14 @@
 (defn native->UNIXAddress [ptr]
   (let [from (n/from-sockaddr :unix ptr)]
     from))
+
+(defn make [host & args]
+  (if (zero? (count args))
+    (UNIXAddress. host)
+    (let [addr (InetAddress/getByName host)]
+      (if (instance? Inet4Address addr)
+        (InternetAddress. (.getHostAddress addr) (first args))
+        (Internet6Address. (.getHostAddress addr) (first args) (or (second args) 0) (.getScopeId addr))))))
 
 (defn internet? [addr]
   (or (instance? InternetAddress addr) (instance? Internet6Address addr)))
