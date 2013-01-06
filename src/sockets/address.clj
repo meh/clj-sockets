@@ -77,4 +77,5 @@
         (Internet6Address. (.getHostAddress addr) (first args) (or (second args) 0) (.getScopeId addr))))))
 
 (defn internet? [addr]
-  (or (instance? InternetAddress addr) (instance? Internet6Address addr)))
+  (or (instance? InternetAddress addr)
+      (instance? Internet6Address addr)))
