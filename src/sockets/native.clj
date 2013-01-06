@@ -162,15 +162,16 @@
       (.write 8  (.getAddress (if (instance? Inet6Address ip) ip (Inet6Address/getByName ip))) 0 16)
       (.write 24 (network-order (int scope-id)) 0 4))))
 
+(defmulti from-sockaddr (fn [type addr] type))
 
-(defn ^:private from-unix-sockaddr [addr]
-  addr)
+(defmethod from-sockaddr :unix [_ addr]
+  (let [buf (.getByteBuffer addr)]
+    buf))
 
-(defn ^:private from-inet-sockaddr [addr]
-  addr)
+(defmethod from-sockaddr :inet [_ addr]
+  (let [buf (.getByteBuffer addr)]
+    buf))
 
-(defn ^:private from-inet6-sockaddr [addr]
-  addr)
-
-(defn from-sockaddr [type addr]
-  ((ns-resolve 'sockets.native (symbol (str "from-" (name type) "-sockaddr"))) addr))
+(defmethod from-sockaddr :inet6 [_ addr]
+  (let [buf (.getByteBuffer addr)]
+    buf))
