@@ -175,3 +175,17 @@
 (defmethod from-sockaddr :inet6 [_ addr]
   (let [buf (.getByteBuffer addr)]
     buf))
+
+(defn size-for [type]
+  (case type
+    :bool Integer/SIZE
+    :int  Integer/SIZE))
+
+(defn pointer-for
+  ([type]
+   (Memory. (size-for type)))
+  ([type data]
+   (let [ptr (pointer-for type)]
+     (case type
+       :bool (.setInt ptr (if data 1 0)))
+     ptr)))
