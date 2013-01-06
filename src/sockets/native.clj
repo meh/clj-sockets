@@ -148,7 +148,7 @@
     (.clear)
     (.write 0 (short-array [(short (:inet domain))]) 0 1)
     (.write 2 (network-order (short port)) 0 2)
-    (.write 4 (.getAddress (if (= (class ip) Inet4Address) ip (Inet4Address/getByName ip))) 0 4)))
+    (.write 4 (.getAddress (if (instance? Inet4Address ip) ip (Inet4Address/getByName ip))) 0 4)))
 
 (defmethod to-sockaddr :inet6
   ([_ ip port]
@@ -159,7 +159,7 @@
       (.write 0  (short-array [(short (:inet6 domain))]) 0 1)
       (.write 2  (network-order (short port)) 0 2)
       (.write 4  (network-order (int flow-info)) 0 4)
-      (.write 8  (.getAddress (if (= (class ip) Inet6Address) ip (Inet6Address/getByName ip))) 0 16)
+      (.write 8  (.getAddress (if (instance? Inet6Address ip) ip (Inet6Address/getByName ip))) 0 16)
       (.write 24 (network-order (int scope-id)) 0 4))))
 
 
