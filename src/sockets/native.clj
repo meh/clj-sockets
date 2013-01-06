@@ -114,28 +114,24 @@
             Short   (.putShort (.order (ByteBuffer/allocate 2) ByteOrder/BIG_ENDIAN) number)
             Integer (.putInt (.order (ByteBuffer/allocate 4) ByteOrder/BIG_ENDIAN) number))))
 
-(defn ^:private create-unix-sockaddr []
-  (Memory. (+
-            #_(unsigned short)     2
-            #_(char sun_path[108]) 108)))
+(defmulti create-sockaddr (fn [type] type))
 
-(defn ^:private create-inet-sockaddr []
-  (Memory. (+
-           #_(short sin_family)        2
-           #_(unsigned short sin_port) 2
-           #_(unsigned long sin_addr)  4
-           #_(char sin_zero[8])        8)))
+(defmethod create-sockaddr :unix [_]
+  (Memory. (+ #_(unsigned short)     2
+              #_(char sun_path[108]) 108)))
 
-(defn ^:private create-inet6-sockaddr []
-  (Memory. (+
-            #_(uint16_t sin6_family)        2
-            #_(uint16_t sin6_port)          2
-            #_(uint32_t sin6_flowinfo)      4
-            #_(unsigned char sin6_addr[16]) 16
-            #_(uint32_t sin6_scope_id)      4)))
+(defmethod create-sockaddr :inet [_]
+  (Memory. (+ #_(short sin_family)        2
+              #_(unsigned short sin_port) 2
+              #_(unsigned long sin_addr)  4
+              #_(char sin_zero[8])        8)))
 
-(defn create-sockaddr [type]
-  ((ns-resolve 'sockets.native (symbol (str "create-" (name type) "-sockaddr")))))
+(defmethod create-sockaddr :inet6 [_]
+  (Memory. (+ #_(uint16_t sin6_family)        2
+              #_(uint16_t sin6_port)          2
+              #_(uint32_t sin6_flowinfo)      4
+              #_(unsigned char sin6_addr[16]) 16
+              #_(uint32_t sin6_scope_id)      4)))
 
 (defn ^:private to-unix-sockaddr [path]
   (if (> (count path) 107)
