@@ -133,25 +133,28 @@
               #_(unsigned char sin6_addr[16]) 16
               #_(uint32_t sin6_scope_id)      4)))
 
-(defn ^:private to-unix-sockaddr [path]
+(defmulti to-sockaddr (fn [type & _] type))
+
+(defmethod to-sockaddr :unix [_ path]
   (if (> (count path) 107)
     (throw (IllegalArgumentException. "path is too long"))
-    (doto (create-unix-sockaddr)
+    (doto (create-sockaddr :unix)
       (.clear)
       (.write 0 (short-array [(short (:unix domain))]) 0 1)
       (.write 2 (char-array path) 0 1))))
 
-(defn ^:private to-inet-sockaddr [ip port]
-  (doto (create-inet-sockaddr)
+(defmethod to-sockaddr :inet [_ ip port]
+  (doto (create-sockaddr :inet)
     (.clear)
     (.write 0 (short-array [(short (:inet domain))]) 0 1)
     (.write 2 (network-order (short port)) 0 2)
     (.write 4 (.getAddress (if (= (class ip) Inet4Address) ip (Inet4Address/getByName ip))) 0 4)))
 
-(defn ^:private to-inet6-sockaddr
-  ([ip port] (to-inet6-sockaddr ip port 0 0))
-  ([ip port flow-info scope-id]
-    (doto (create-inet6-sockaddr)
+(defmethod to-sockaddr :inet6
+  ([_ ip port]
+   (to-sockaddr :inet6 ip port 0 0))
+  ([_ ip port flow-info scope-id]
+    (doto (create-sockaddr :inet6)
       (.clear)
       (.write 0  (short-array [(short (:inet6 domain))]) 0 1)
       (.write 2  (network-order (short port)) 0 2)
@@ -159,8 +162,6 @@
       (.write 8  (.getAddress (if (= (class ip) Inet6Address) ip (Inet6Address/getByName ip))) 0 16)
       (.write 24 (network-order (int scope-id)) 0 4))))
 
-(defn to-sockaddr [type & args]
-  (apply (ns-resolve 'sockets.native (symbol (str "to-" (name type) "-sockaddr"))) args))
 
 (defn ^:private from-unix-sockaddr [addr]
   addr)
