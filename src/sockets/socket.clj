@@ -40,7 +40,7 @@
   (unset [this option])
   (get [this option])
   (local-address [this])
-  (remote [this]))
+  (remote-address [this]))
 
 (defprotocol Sendable
   (sendable [this]))
