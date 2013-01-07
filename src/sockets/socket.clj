@@ -42,6 +42,17 @@
   (local-address [this])
   (remote-address [this]))
 
+(defmacro with [bindings & body]
+  (assert (vector? bindings))
+  (assert (-> bindings count even?))
+  (cond
+    (-> bindings count zero?) `(do ~@body)
+    (symbol? (bindings 0))     `(let ~(subvec bindings 0 2)
+                                 (try
+                                   (with ~(subvec bindings 2) ~@body)
+                                   (finally
+                                     (close ~(bindings 0)))))))
+
 (defprotocol Sendable
   (sendable [this]))
 
