@@ -48,16 +48,18 @@
 (defn option? [name]
   (contains? options name))
 
-(defn set [fd name & data]
-  (let [[id type] (options name)]
-    (apply native/setsockopt fd socket-level id
-           (case type
-             :bool [(native/pointer-for :bool (or (first data) true)) (native/size-for :bool)]))))
+(defn set [fd name]
+  (let [[id _] (options name)]
+    (native/setsockopt fd socket-level id (native/pointer-for :bool true) (native/size-for :bool))))
+
+(defn unset [fd name]
+  (let [[id _] (options name)]
+    (native/setsockopt fd socket-level id (native/pointer-for :bool false) (native/size-for :bool))))
 
 (defn get [fd name]
-  (let [[id type] (options name)]
-    (case type
-      :bool (native/getsockopt fd socket-level (native/pointer-for :int) (native/size-for :int)))))
+  (let [[id _] (options name), ptr (native/pointer-for :bool)]
+    (native/getsockopt fd socket-level id ptr (native/size-for :bool))
+    (not (zero? (.getInt ptr)))))
 
 (defonce ^:private get-flags 3)
 (defonce ^:private set-flags 4)
