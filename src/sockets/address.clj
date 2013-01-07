@@ -62,7 +62,7 @@
     (let [addr (InetAddress/getByName host)]
       (if (instance? Inet4Address addr)
         (InternetAddress. (.getHostAddress addr) (first args))
-        (Internet6Address. (.getHostAddress addr) (first args) (or (second args) 0) (.getScopeId addr))))))
+        (Internet6Address. (.getHostAddress addr) (args 0) (args 1) (or (get args 2) (.getScopeId addr)))))))
 
 (defn internet? [addr]
   (or (instance? InternetAddress addr)
