@@ -120,11 +120,11 @@
                     (.getInt ptr)))))
   (local-address [this]
     (let [ptr (native/create-sockaddr (versions version))]
-      (native/getsockname fd ptr (native/pointer-for :int))
+      (native/getsockname fd ptr (native/pointer-for :int (.size ptr)))
       (apply address/make (native/from-sockaddr ptr))))
   (remote-address [this]
     (let [ptr (native/create-sockaddr (versions version))]
-      (native/getpeername fd ptr (native/pointer-for :int))
+      (native/getpeername fd ptr (native/pointer-for :int (.size ptr)))
       (apply address/make (native/from-sockaddr ptr)))))
 
 (defn socket [version]
