@@ -98,10 +98,26 @@
     (assert (satisfies? Sendable data))
     (let [[data length] (sendable data)]
       (native/send fd data length 0)))
-  (set [this option data]
+  (set [this option]
     (if (fd/option? option)
-      (fd/set fd option data)
-      (true))))
+      (fd/set fd option)
+      (set this option true)))
+  (unset [this option]
+    (if (fd/option? option)
+      (fd/unset fd option)
+      (set this option false)))
+  (set [this option data]
+    (assert (option? option))
+    (let [[id type] (options name)]
+      (native/setsockopt fd (native/protocol :tcp) id (native/pointer-for type data) (native/size-for type))))
+  (get [this option]
+    (assert (option? option))
+       (let [[id type] (options name), ptr (native/pointer-for type)]
+         (case type
+           :bool (do (native/getsockopt fd (native/protocol :tcp) id ptr (native/size-for type))
+                     (not (zero? (.getInt ptr))))
+           :int (do (native/getsockopt fd (native/protocol :tcp) id ptr (native/size-for type))
+                    (.getInt ptr))))))
 
 (defn socket [version]
   (Socket. (native/socket
