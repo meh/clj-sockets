@@ -17,9 +17,10 @@
 
 (ns sockets.tcp
   (:refer-clojure :exclude [send set get])
-  (:require [sockets.native :as n]
+  (:require [sockets.native :as native]
+            [sockets.fd :as fd]
             [sockets.address :as address]
-            [sockets.socket :refer :all :rename {Socket Socket*}])
+            [sockets.socket :as socket :refer :all :rename {Socket Socket*}])
   (:import [sockets.address InternetAddress Internet6Address]
            [com.sun.jna Memory]))
 
@@ -47,73 +48,105 @@
                            :keep-count     [0x400 :int]
                            :md5-signatures [0x010 :bool]}))
 
+(defn option? [name]
+  (contains? options name))
+
 (deftype Socket [fd]
   Socket*
   (connect [this addr]
     (assert (address/internet? addr))
     (let [sockaddr (.native addr)]
-      (println fd)
-      (println (.size sockaddr))
-      (n/connect fd sockaddr (.size sockaddr))))
+      (native/connect fd sockaddr (.size sockaddr))))
   (bind [this addr]
     (assert (address/internet? addr))
     (let [sockaddr (.native addr)]
-      (n/bind fd sockaddr (.size sockaddr))))
+      (native/bind fd sockaddr (.size sockaddr))))
   (listen [this]
     (listen this 4096))
   (listen [this backlog]
-    (n/listen fd backlog))
+    (native/listen fd backlog))
   (accept [this]
-    (Socket. (n/accept fd nil nil)))
+    (Socket. (native/accept fd nil nil)))
   (close [this]
-    (n/close fd))
+    (native/close fd))
+  (alive? [this]
+    (fd/alive? fd))
   (shutdown [this]
     (shutdown this #{:read :write}))
   (shutdown [this mode]
-    (n/shutdown fd
+    (native/shutdown fd
                 (case mode
-                  #{:read}  (:read n/shutdown-mode)
-                  #{:write} (:write n/shutdown-mode)
-                  #{:read :write} (:both n/shutdown-mode))))
+                  #{:read}  (:read native/shutdown-mode)
+                  #{:write} (:write native/shutdown-mode)
+                  #{:read :write} (:both native/shutdown-mode))))
+  (synchronous! [this]
+    (fd/synchronous! fd))
+  (synchronous? [this]
+    (fd/synchronous? fd))
+  (asynchronous! [this]
+    (fd/asynchronous! fd))
+  (asynchronous? [this]
+    (fd/asynchronous? fd))
   (recv [this size]
     (let [ptr (Memory. size)]
-      (.getByteBuffer ptr 0 (n/recv fd ptr size 0))))
+      (.getByteBuffer ptr 0 (native/recv fd ptr size 0))))
   (send [this data]
     (assert (satisfies? Sendable data))
     (let [[data length] (sendable data)]
-      (n/send fd data length 0)))
+      (native/send fd data length 0)))
   (set [this option data]
-    (if (handles-option? option)
-      (set-option this data)
+    (if (fd/option? option)
+      (fd/set fd option data)
       (true))))
 
-(defn socket
-  ([] (socket 4))
-  ([host port]
-   (socket (address/make host port)))
-  ([addr-or-version]
-   (condp instance? addr-or-version
-     InternetAddress (doto (socket 4) (.connect addr-or-version))
-     Internet6Address (doto (socket 6) (.connect addr-or-version))
-     (Socket. (n/socket
-                   ((case addr-or-version
-                      4 :inet
-                      6 :inet6) n/domain)
-                   (:stream n/mode)
-                   (:ip n/protocol))))))
+(defn socket [version]
+  (Socket. (native/socket
+             ((case version
+                4 :inet
+                6 :inet6) native/domain)
+             (:stream native/mode)
+             (:ip native/protocol))))
 
-(defn socket4
-  ([] (socket 4))
+(defn client
   ([host port]
-   (socket4 (address/make host port)))
+   (client (address/make host port)))
+  ([addr]
+   (condp instance? addr
+     InternetAddress (doto (socket 4) (connect addr))
+     Internet6Address (doto (socket 6) (connect addr)))))
+
+(defn client4
+  ([host port]
+   (client4 (address/make host port)))
   ([addr]
    (assert (instance? InternetAddress addr))
    (socket addr)))
 
-(defn socket6
-  ([] (socket 6))
+(defn client6
   ([host port]
-   (socket6 (address/make host port)))
+   (client6 (address/make host port)))
+  ([addr]
+   (assert (instance? Internet6Address addr))
+   (socket addr)))
+
+(defn server
+  ([host port]
+   (server (address/make host port)))
+  ([addr]
+   (condp instance? addr
+     InternetAddress (doto (socket 4) (bind addr) (.listen))
+     Internet6Address (doto (socket 6) (bind addr) (.listen)))))
+
+(defn server4
+  ([host port]
+   (server4 (address/make host port)))
+  ([addr]
+   (assert (instance? InternetAddress addr))
+   (socket addr)))
+
+(defn server6
+  ([host port]
+   (server6 (address/make host port)))
   ([addr]
    (assert (instance? Internet6Address addr))
    (socket addr)))
