@@ -229,5 +229,6 @@
   ([type data]
    (let [ptr (pointer-for type)]
      (case type
-       :bool (.setInt ptr (if data 1 0)))
+       :bool (.setInt ptr 0 (if data 1 0))
+       :int  (.setInt ptr 0 data))
      ptr)))
