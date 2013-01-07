@@ -19,7 +19,7 @@
   (:refer-clojure :exclude [send])
   (:import [java.net Inet4Address Inet6Address]
            [java.nio ByteBuffer ByteOrder]
-           [com.sun.jna Function NativeLibrary Pointer Memory]))
+           [com.sun.jna Native Function Pointer Memory]))
 
 (defonce domain
   {:unix  1
@@ -45,9 +45,26 @@
    :write 1
    :both  2})
 
-(defmacro ^:private defnative [func ret-type args-type]
+(defmacro ^:private defnative* [func ret-type args-type]
   `(defn ~func [& args#]
      (.invoke (Function/getFunction "c" ~(name func)) ~ret-type (to-array args#))))
+
+(defmacro ^:private defnative
+  ([func ret-type args-type]
+   `(defnative ~func ~ret-type ~args-type ~(fn [res] (neg? res))))
+  ([func ret-type args-type errno-check]
+   `(do
+     (defnative* ~(symbol (str (name func) "*")) ~ret-type ~args-type)
+     (defn ~func [& args#]
+        (let [res# (.invoke (Function/getFunction "c" ~(name func)) ~ret-type (to-array args#))]
+          (if (~errno-check res#)
+            (let [errno# (Native/getLastError)]
+              (throw (ex-info (strerror (Native/getLastError)) {:code errno#})))
+            res#))))))
+
+(defnative* strerror
+  String
+  [Integer])
 
 (defnative socket
   Integer
@@ -108,6 +125,10 @@
 (defnative getpeername
   Integer
   [Integer Pointer Pointer])
+
+(defnative fcntl
+  Integer
+  [Integer Integer Integer])
 
 (defn ^:private network-order [number]
   (.array (condp instance? number
