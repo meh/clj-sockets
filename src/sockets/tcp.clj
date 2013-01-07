@@ -117,7 +117,15 @@
            :bool (do (native/getsockopt fd (native/protocol :tcp) id ptr (native/size-for type))
                      (not (zero? (.getInt ptr))))
            :int (do (native/getsockopt fd (native/protocol :tcp) id ptr (native/size-for type))
-                    (.getInt ptr))))))
+                    (.getInt ptr)))))
+  (local-address [this]
+    (let [ptr (native/create-sockaddr (versions version))]
+      (native/getsockname fd ptr (native/pointer-for :int))
+      (apply address/make (native/from-sockaddr ptr))))
+  (remote-address [this]
+    (let [ptr (native/create-sockaddr (versions version))]
+      (native/getpeername fd ptr (native/pointer-for :int))
+      (apply address/make (native/from-sockaddr ptr)))))
 
 (defn socket [version]
   (Socket. (native/socket
