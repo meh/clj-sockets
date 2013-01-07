@@ -17,7 +17,7 @@
 
 (ns sockets.native
   (:refer-clojure :exclude [send])
-  (:import [java.net Inet4Address Inet6Address]
+  (:import [java.net InetAddress Inet4Address Inet6Address]
            [java.nio ByteBuffer ByteOrder]
            [com.sun.jna Native Function Pointer Memory]))
 
@@ -183,19 +183,40 @@
       (.write 8  (.getAddress (if (instance? Inet6Address ip) ip (Inet6Address/getByName ip))) 0 16)
       (.write 24 (network-order (int scope-id)) 0 4))))
 
-(defmulti from-sockaddr (fn [type addr] type))
-
-(defmethod from-sockaddr :unix [_ addr]
-  (let [buf (.getByteBuffer addr)]
-    buf))
-
-(defmethod from-sockaddr :inet [_ addr]
-  (let [buf (.getByteBuffer addr)]
-    buf))
-
-(defmethod from-sockaddr :inet6 [_ addr]
-  (let [buf (.getByteBuffer addr)]
-    buf))
+(defn from-sockaddr [ptr]
+  (let [result (transient [])]
+    (persistent! (case ((zipmap (vals domain) (keys domain)) (.getShort ptr 0))
+                   :unix (conj! result (.getString ptr 2))
+                   :inet (-> result
+                             (conj! (-> ptr
+                                        (.getByteArray 4 4)
+                                        (InetAddress/getByAddress)
+                                        (.getHostAddress)))
+                             (conj! (-> ptr
+                                        (.getByteBuffer 2 2)
+                                        (.order ByteOrder/BIG_ENDIAN)
+                                        (.getShort)
+                                        (bit-and 0xffff))))
+                   :inet6 (-> result
+                              (conj! (-> ptr
+                                         (.getByteArray 8 16)
+                                         (InetAddress/getByAddress)
+                                         (.getHostAddress)))
+                              (conj! (-> ptr
+                                         (.getByteBuffer 2 2)
+                                         (.order ByteOrder/BIG_ENDIAN)
+                                         (.getShort)
+                                         (bit-and 0xffff)))
+                              (conj! (-> ptr
+                                         (.getByteBuffer 4 2)
+                                         (.order ByteOrder/BIG_ENDIAN)
+                                         (.getShort)
+                                         (bit-and 0xffff)))
+                              (conj! (-> ptr
+                                         (.getByteBuffer 24 4)
+                                         (.order ByteOrder/BIG_ENDIAN)
+                                         (.getInt)
+                                         (bit-and 0xffffffff))))))))
 
 (defn size-for [type]
   (case type
