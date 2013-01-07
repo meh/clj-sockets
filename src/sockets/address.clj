@@ -56,13 +56,13 @@
   (toString [this]
     (str path)))
 
-(defn make [host & args]
-  (if (empty? args)
-    (UNIXAddress. host)
+(defn make
+  ([host] (UNIXAddress. host))
+  ([host & args]
     (let [addr (InetAddress/getByName host)]
       (if (instance? Inet4Address addr)
-        (InternetAddress. (.getHostAddress addr) (first args))
-        (Internet6Address. (.getHostAddress addr) (args 0) (args 1) (or (get args 2) (.getScopeId addr)))))))
+        (InternetAddress. (.getHostAddress addr) (args 0))
+        (Internet6Address. (.getHostAddress addr) (args 0) (or (get args 1) 0) (or (get args 2) (.getScopeId addr)))))))
 
 (defn internet? [addr]
   (or (instance? InternetAddress addr)
