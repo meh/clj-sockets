@@ -48,10 +48,14 @@
                            :keep-count     [0x400 :int]
                            :md5-signatures [0x010 :bool]}))
 
+(defonce ^:private versions
+  {4 :inet
+   6 :inet6})
+
 (defn option? [name]
   (contains? options name))
 
-(deftype Socket [fd]
+(deftype Socket [fd version]
   Socket*
   (connect [this addr]
     (assert (address/internet? addr))
@@ -66,7 +70,7 @@
   (listen [this backlog]
     (native/listen fd backlog))
   (accept [this]
-    (Socket. (native/accept fd nil nil)))
+    (Socket. (native/accept fd nil nil) version))
   (close [this]
     (native/close fd))
   (alive? [this]
@@ -101,11 +105,10 @@
 
 (defn socket [version]
   (Socket. (native/socket
-             ((case version
-                4 :inet
-                6 :inet6) native/domain)
-             (:stream native/mode)
-             (:ip native/protocol))))
+             (native/domain (versions version) )
+             (native/mode :stream)
+             (native/protocol :ip))
+           version))
 
 (defn client
   ([host port]
