@@ -69,7 +69,7 @@
     from))
 
 (defn make [host & args]
-  (if (zero? (count args))
+  (if (empty? args)
     (UNIXAddress. host)
     (let [addr (InetAddress/getByName host)]
       (if (instance? Inet4Address addr)
