@@ -17,8 +17,8 @@
 
 (ns sockets.socket
   (:refer-clojure :exclude [send set get])
-  (:require [sockets.native :as n])
-  (:import [java.nio ByteBuffer CharBuffer ShortBuffer IntBuffer LongBuffer]))
+  (:import [java.nio ByteBuffer CharBuffer ShortBuffer IntBuffer LongBuffer]
+           [com.sun.jna Memory]))
 
 (defprotocol Socket
   (connect [this addr])
@@ -36,46 +36,6 @@
   (get [this option])
   (local-address [this])
   (remote [this]))
-
-(defonce ^:private options
-  (case (System/getProperty "os.name")
-    "Linux" {:broadcast    [6  :bool]
-             :reuse-addr   [2  :bool]
-             :keep-alive   [9  :bool]
-             :linger       [13 :bool]
-             :do-not-route [5  :bool]}
-
-    "FreeBSD" {:broadcast    [0x20 :bool]
-               :reuse-addr   [0x04 :bool]
-               :keep-alive   [0x08 :bool]
-               :linger       [0x80 :bool]
-               :do-not-route [0x10 :bool]}
-
-    ("Mac OS" "Mac OS X") {:broadcast    [0x20 :bool]
-                           :reuse-addr   [0x04 :bool]
-                           :keep-alive   [0x08 :bool]
-                           :linger       [0x80 :bool]
-                           :do-not-route [0x10 :bool]}))
-
-(defonce ^:private socket-level
-  (case (System/getProperty "os.name")
-    "Linux"               1
-    "FreeBSD"             0xffff
-    ("Mac OS" "Mac OS X") 0xffff))
-
-(defn handles-option? [name]
-  (contains? options name))
-
-(defn set-option [socket name & data]
-  (let [[id type] (options name)]
-    (apply n/setsockopt (.fd socket) socket-level id
-           (case type
-             :bool [(n/pointer-for :bool (or (first data) true)) (n/size-for :bool)]))))
-
-(defn get-option [socket name]
-  (let [[id type] (options name)]
-    (case type
-      :bool (n/getsockopt (.fd socket) socket-level (n/pointer-for :int) (n/size-for :int)))))
 
 (defprotocol Sendable
   (sendable [this]))
