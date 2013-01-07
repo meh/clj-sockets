@@ -43,23 +43,23 @@
 (extend-protocol Sendable
   Byte
   (sendable [this]
-    (let [size Byte/SIZE]
-      [(.put (ByteBuffer/allocateDirect size) this) size]))
+    (let [ptr (Memory. Byte/SIZE)]
+      [(.setByte ptr 0 this) (.size ptr)]))
 
   Short
   (sendable [this]
-    (let [size Short/SIZE]
-      [(.putShort (ByteBuffer/allocateDirect size) this) size]))
+    (let [ptr (Memory. Short/SIZE)]
+      [(.setShort ptr 0 this) (.size ptr)]))
 
   Integer
   (sendable [this]
-    (let [size Integer/SIZE]
-      [(.putInt (ByteBuffer/allocateDirect size) this) size]))
+    (let [ptr (Memory. Integer/SIZE)]
+      [(.setInt ptr 0 this) (.size ptr)]))
 
   Long
   (sendable [this]
-    (let [size Long/SIZE]
-      (.putLong (ByteBuffer/allocateDirect Long/SIZE) this)))
+    (let [ptr (Memory. Long/SIZE)]
+      [(.setLong ptr 0 this) (.size ptr)]))
 
   String
   (sendable [this]
