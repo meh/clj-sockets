@@ -56,18 +56,6 @@
   (toString [this]
     (str path)))
 
-(defn native->InternetAddress [ptr]
-  (let [from (n/from-sockaddr :inet ptr)]
-    from))
-
-(defn native->Internet6Address [ptr]
-  (let [from (n/from-sockaddr :inet6 ptr)]
-    from))
-
-(defn native->UNIXAddress [ptr]
-  (let [from (n/from-sockaddr :unix ptr)]
-    from))
-
 (defn make [host & args]
   (if (empty? args)
     (UNIXAddress. host)
