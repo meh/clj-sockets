@@ -17,21 +17,17 @@
 
 (ns sockets.socket
   (:refer-clojure :exclude [send set get])
+  (:require [sockets.native :as native]
+            [sockets.fd :as fd])
   (:import [java.nio ByteBuffer CharBuffer ShortBuffer IntBuffer LongBuffer]
            [com.sun.jna Memory]))
 
 (defprotocol Socket
+  (fd [this])
   (connect [this addr])
   (bind [this addr])
   (listen [this] [this backlog])
   (accept [this])
-  (close [this])
-  (alive? [this])
-  (shutdown [this] [this mode])
-  (synchronous! [this])
-  (synchronous? [this])
-  (asynchronous! [this])
-  (asynchronous? [this])
   (recv [this size])
   (send [this data])
   (recvfrom [this size])
@@ -41,6 +37,41 @@
   (get [this option])
   (local-address [this])
   (remote-address [this]))
+
+(defn close [socket]
+  (assert (satisfies? Socket socket))
+  (native/close (fd socket)))
+
+(defn shutdown
+  ([socket]
+    (shutdown socket #{:read :write}))
+  ([socket mode]
+   (assert (satisfies? Socket socket))
+   (native/shutdown (fd socket)
+                    (case mode
+                      #{:read}        (:read native/shutdown-mode)
+                      #{:write}       (:write native/shutdown-mode)
+                      #{:read :write} (:both native/shutdown-mode)))))
+
+(defn synchronous! [socket]
+  (assert (satisfies? Socket socket))
+  (fd/synchronous! (fd socket)))
+
+(defn synchronous? [socket]
+  (assert (satisfies? Socket socket))
+  (fd/synchronous? (fd socket)))
+
+(defn asynchronous! [socket]
+  (assert (satisfies? Socket socket))
+  (fd/asynchronous! (fd socket)))
+
+(defn asynchronous? [socket]
+  (assert (satisfies? Socket socket))
+  (fd/asynchronous? (fd socket)))
+
+(defn alive? [socket]
+  (assert (satisfies? Socket socket))
+  (fd/alive? (fd socket)))
 
 (defmacro with [bindings & body]
   (assert (vector? bindings))

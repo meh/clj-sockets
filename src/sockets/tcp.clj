@@ -57,6 +57,8 @@
 
 (deftype Socket [fd version]
   Socket*
+  (fd [this]
+    fd)
   (connect [this addr]
     (assert (address/internet? addr))
     (let [sockaddr (.native addr)]
@@ -71,26 +73,6 @@
     (native/listen fd backlog))
   (accept [this]
     (Socket. (native/accept fd nil nil) version))
-  (close [this]
-    (native/close fd))
-  (alive? [this]
-    (fd/alive? fd))
-  (shutdown [this]
-    (shutdown this #{:read :write}))
-  (shutdown [this mode]
-    (native/shutdown fd
-                (case mode
-                  #{:read}  (:read native/shutdown-mode)
-                  #{:write} (:write native/shutdown-mode)
-                  #{:read :write} (:both native/shutdown-mode))))
-  (synchronous! [this]
-    (fd/synchronous! fd))
-  (synchronous? [this]
-    (fd/synchronous? fd))
-  (asynchronous! [this]
-    (fd/asynchronous! fd))
-  (asynchronous? [this]
-    (fd/asynchronous? fd))
   (recv [this size]
     (let [ptr (Memory. size)]
       (.getByteBuffer ptr 0 (native/recv fd ptr size 0))))
