@@ -76,3 +76,6 @@
 (defn internet? [addr]
   (or (instance? InternetAddress addr)
       (instance? Internet6Address addr)))
+
+(defn unix? [addr]
+  (instance? UNIXAddress addr))
