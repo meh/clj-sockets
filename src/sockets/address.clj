@@ -57,12 +57,21 @@
     (str path)))
 
 (defn make
-  ([host] (UNIXAddress. host))
-  ([host & args]
+  ([host]
+   (UNIXAddress. host))
+  ([host port]
     (let [addr (InetAddress/getByName host)]
       (if (instance? Inet4Address addr)
-        (InternetAddress. (.getHostAddress addr) (args 0))
-        (Internet6Address. (.getHostAddress addr) (args 0) (or (get args 1) 0) (or (get args 2) (.getScopeId addr)))))))
+        (InternetAddress. (.getHostAddress addr) port)
+        (Internet6Address. (.getHostAddress addr) port 0 (.getScopeId addr)))))
+  ([host port flow-info]
+    (let [addr (InetAddress/getByName host)]
+      (assert (instance? Inet4Address addr))
+      (Internet6Address. (.getHostAddress addr) port flow-info (.getScopeId addr))))
+  ([host port flow-info scope-id]
+    (let [addr (InetAddress/getByName host)]
+      (assert (instance? Inet4Address addr))
+      (Internet6Address. (.getHostAddress addr) port flow-info scope-id))))
 
 (defn internet? [addr]
   (or (instance? InternetAddress addr)
