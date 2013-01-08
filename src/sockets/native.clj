@@ -29,6 +29,9 @@
             "FreeBSD"             28
             ("Mac OS" "Mac OS X") 30)})
 
+(defonce ^:private -domain
+  (zipmap (vals domain) (keys domain)))
+
 (defonce mode
   {:stream   1
    :datagram 2
@@ -47,19 +50,23 @@
 
 (defmacro ^:private defnative* [func ret-type args-type]
   `(defn ~func [& args#]
-     (.invoke (Function/getFunction "c" ~(name func)) ~ret-type (to-array args#))))
+     (.invoke (Function/getFunction "c" ~(name func))
+              ~ret-type (to-array args#))))
 
 (defmacro ^:private defnative
   ([func ret-type args-type]
    `(defnative ~func ~ret-type ~args-type ~(fn [res] (neg? res))))
   ([func ret-type args-type errno-check]
    `(do
-     (defnative* ~(symbol (str (name func) "*")) ~ret-type ~args-type)
-     (defn ~func [& args#]
-        (let [res# (.invoke (Function/getFunction "c" ~(name func)) ~ret-type (to-array args#))]
+      (defnative* ~(symbol (str (name func) "*"))
+                  ~ret-type ~args-type)
+      (defn ~func [& args#]
+        (let [res# (.invoke (Function/getFunction "c" ~(name func))
+                            ~ret-type (to-array args#))]
           (if (~errno-check res#)
             (let [errno# (Native/getLastError)]
-              (throw (ex-info (strerror (Native/getLastError)) {:code errno#})))
+              (throw (ex-info (strerror (Native/getLastError))
+                              {:code errno#})))
             res#))))))
 
 (defnative* strerror
@@ -132,8 +139,10 @@
 
 (defn ^:private network-order [number]
   (.array (condp instance? number
-            Short   (.putShort (.order (ByteBuffer/allocate 2) ByteOrder/BIG_ENDIAN) number)
-            Integer (.putInt (.order (ByteBuffer/allocate 4) ByteOrder/BIG_ENDIAN) number))))
+            Short   (.putShort (.order (ByteBuffer/allocate 2)
+                                       ByteOrder/BIG_ENDIAN) number)
+            Integer (.putInt (.order (ByteBuffer/allocate 4)
+                                     ByteOrder/BIG_ENDIAN) number))))
 
 (defmulti create-sockaddr (fn [type] type))
 
@@ -169,54 +178,61 @@
     (.clear)
     (.write 0 (short-array [(short (:inet domain))]) 0 1)
     (.write 2 (network-order (short port)) 0 2)
-    (.write 4 (.getAddress (if (instance? Inet4Address ip) ip (Inet4Address/getByName ip))) 0 4)))
+    (.write 4 (.getAddress (if (instance? Inet4Address ip)
+                             ip
+                             (Inet4Address/getByName ip)))
+            0 4)))
 
 (defmethod to-sockaddr :inet6
   ([_ ip port]
    (to-sockaddr :inet6 ip port 0 0))
   ([_ ip port flow-info scope-id]
-    (doto (create-sockaddr :inet6)
-      (.clear)
-      (.write 0  (short-array [(short (:inet6 domain))]) 0 1)
-      (.write 2  (network-order (short port)) 0 2)
-      (.write 4  (network-order (int flow-info)) 0 4)
-      (.write 8  (.getAddress (if (instance? Inet6Address ip) ip (Inet6Address/getByName ip))) 0 16)
-      (.write 24 (network-order (int scope-id)) 0 4))))
+   (doto (create-sockaddr :inet6)
+     (.clear)
+     (.write 0  (short-array [(short (:inet6 domain))]) 0 1)
+     (.write 2  (network-order (short port)) 0 2)
+     (.write 4  (network-order (int flow-info)) 0 4)
+     (.write 8  (.getAddress (if (instance? Inet6Address ip)
+                               ip
+                               (Inet6Address/getByName ip)))
+             0 16)
+     (.write 24 (network-order (int scope-id)) 0 4))))
 
 (defn from-sockaddr [ptr]
-  (let [result (transient [])]
-    (persistent! (case ((zipmap (vals domain) (keys domain)) (.getShort ptr 0))
-                   :unix (conj! result (.getString ptr 2))
-                   :inet (-> result
-                             (conj! (-> ptr
-                                        (.getByteArray 4 4)
-                                        (InetAddress/getByAddress)
-                                        (.getHostAddress)))
-                             (conj! (-> ptr
-                                        (.getByteBuffer 2 2)
-                                        (.order ByteOrder/BIG_ENDIAN)
-                                        (.getShort)
-                                        (bit-and 0xffff))))
-                   :inet6 (-> result
-                              (conj! (-> ptr
-                                         (.getByteArray 8 16)
-                                         (InetAddress/getByAddress)
-                                         (.getHostAddress)))
-                              (conj! (-> ptr
-                                         (.getByteBuffer 2 2)
-                                         (.order ByteOrder/BIG_ENDIAN)
-                                         (.getShort)
-                                         (bit-and 0xffff)))
-                              (conj! (-> ptr
-                                         (.getByteBuffer 4 2)
-                                         (.order ByteOrder/BIG_ENDIAN)
-                                         (.getShort)
-                                         (bit-and 0xffff)))
-                              (conj! (-> ptr
-                                         (.getByteBuffer 24 4)
-                                         (.order ByteOrder/BIG_ENDIAN)
-                                         (.getInt)
-                                         (bit-and 0xffffffff))))))))
+  (persistent!
+    (let [result (transient [])]
+      (case (-domain (.getShort ptr 0))
+        :unix (conj! result (.getString ptr 2))
+        :inet (-> result
+                  (conj! (-> ptr
+                             (.getByteArray 4 4)
+                             (InetAddress/getByAddress)
+                             (.getHostAddress)))
+                  (conj! (-> ptr
+                             (.getByteBuffer 2 2)
+                             (.order ByteOrder/BIG_ENDIAN)
+                             (.getShort)
+                             (bit-and 0xffff))))
+        :inet6 (-> result
+                   (conj! (-> ptr
+                              (.getByteArray 8 16)
+                              (InetAddress/getByAddress)
+                              (.getHostAddress)))
+                   (conj! (-> ptr
+                              (.getByteBuffer 2 2)
+                              (.order ByteOrder/BIG_ENDIAN)
+                              (.getShort)
+                              (bit-and 0xffff)))
+                   (conj! (-> ptr
+                              (.getByteBuffer 4 2)
+                              (.order ByteOrder/BIG_ENDIAN)
+                              (.getShort)
+                              (bit-and 0xffff)))
+                   (conj! (-> ptr
+                              (.getByteBuffer 24 4)
+                              (.order ByteOrder/BIG_ENDIAN)
+                              (.getInt)
+                              (bit-and 0xffffffff))))))))
 
 (defn size-for [type]
   (case type

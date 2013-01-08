@@ -75,14 +75,12 @@
 
 (defmacro with [bindings & body]
   (assert (vector? bindings))
-  (assert (-> bindings count even?))
-  (cond
-    (empty? bindings)      `(do ~@body)
-    (symbol? (bindings 0)) `(let ~(subvec bindings 0 2)
-                              (try
-                                (with ~(subvec bindings 2) ~@body)
-                                (finally
-                                  (close ~(bindings 0)))))))
+  (assert (even? (count bindings)))
+  `(let [~@bindings]
+     (try
+       ~@body
+       (finally
+         ~@(map #(list `close %) (take-nth 2 bindings))))))
 
 (defprotocol Sendable
   (sendable [this]))

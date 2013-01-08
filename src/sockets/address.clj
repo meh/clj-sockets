@@ -16,7 +16,7 @@
 ;; along with clj-sockets If not, see <http://www.gnu.org/licenses/>.
 
 (ns sockets.address
-  (:require [sockets.native :as n])
+  (:require [sockets.native :as native])
   (:import  [java.net InetAddress Inet4Address Inet6Address]))
 
 (defprotocol Address
@@ -28,7 +28,7 @@
   (domain [this]
     :inet)
   (native [this]
-    (n/to-sockaddr :inet address port))
+    (native/to-sockaddr :inet address port))
 
   Object
   (toString [this]
@@ -36,10 +36,10 @@
 
 (deftype Internet6Address [address port flow-info scope-id]
   Address
-  (native [this]
-    (n/to-sockaddr :inet6 address port flow-info scope-id))
   (domain [this]
     :inet6)
+  (native [this]
+    (native/to-sockaddr :inet6 address port flow-info scope-id))
 
   Object
   (toString [this]
@@ -47,10 +47,10 @@
 
 (deftype UNIXAddress [path]
   Address
-  (native [this]
-    (n/to-sockaddr :unix path))
   (domain [this]
     :unix)
+  (native [this]
+    (native/to-sockaddr :unix path))
 
   Object
   (toString [this]
@@ -63,15 +63,18 @@
     (let [addr (InetAddress/getByName host)]
       (if (instance? Inet4Address addr)
         (InternetAddress. (.getHostAddress addr) port)
-        (Internet6Address. (.getHostAddress addr) port 0 (.getScopeId addr)))))
+        (Internet6Address. (.getHostAddress addr) port 0
+                           (.getScopeId addr)))))
   ([host port flow-info]
     (let [addr (InetAddress/getByName host)]
       (assert (instance? Inet4Address addr))
-      (Internet6Address. (.getHostAddress addr) port flow-info (.getScopeId addr))))
+      (Internet6Address. (.getHostAddress addr) port flow-info
+                         (.getScopeId addr))))
   ([host port flow-info scope-id]
     (let [addr (InetAddress/getByName host)]
       (assert (instance? Inet4Address addr))
-      (Internet6Address. (.getHostAddress addr) port flow-info scope-id))))
+      (Internet6Address. (.getHostAddress addr) port flow-info
+                         scope-id))))
 
 (defn internet? [addr]
   (or (instance? InternetAddress addr)

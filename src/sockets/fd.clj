@@ -50,19 +50,26 @@
 
 (defn set [fd name]
   (let [[id _] (options name)]
-    (native/setsockopt fd socket-level id (native/pointer-for :bool true) (native/size-for :bool))))
+    (native/setsockopt fd socket-level id
+                       (native/pointer-for :bool true)
+                       (native/size-for :bool))))
 
 (defn unset [fd name]
   (let [[id _] (options name)]
-    (native/setsockopt fd socket-level id (native/pointer-for :bool false) (native/size-for :bool))))
+    (native/setsockopt fd socket-level id
+                       (native/pointer-for :bool false)
+                       (native/size-for :bool))))
 
 (defn get [fd name]
-  (let [[id _] (options name), ptr (native/pointer-for :bool)]
-    (native/getsockopt fd socket-level id ptr (native/size-for :bool))
+  (let [[id _] (options name)
+        ptr    (native/pointer-for :bool)]
+    (native/getsockopt fd socket-level id ptr
+                       (native/size-for :bool))
     (not (zero? (.getInt ptr)))))
 
 (defonce ^:private get-flags 3)
 (defonce ^:private set-flags 4)
+
 (defonce ^:private non-block
   (case (System/getProperty "os.name")
     "Linux"               0x0800
@@ -70,7 +77,8 @@
     ("Mac OS" "Mac OS X") 0x0004))
 
 (defn synchronous! [fd]
-  (native/fcntl fd set-flags (bit-and (native/fcntl fd get-flags) (bit-not non-block))))
+  (native/fcntl fd set-flags (bit-and (native/fcntl fd get-flags)
+                                      (bit-not non-block))))
 
 (defn synchronous? [fd]
   (zero? (bit-and (native/fcntl fd get-flags) non-block)))
@@ -88,4 +96,6 @@
     ("Mac OS" "Mac OS X") 0x1008))
 
 (defn alive? [fd]
-  (not (neg? (native/getsockopt* fd socket-level socket-type (native/pointer-for :int) (native/size-for :int)))))
+  (not (neg? (native/getsockopt* fd socket-level socket-type
+                                 (native/pointer-for :int)
+                                 (native/size-for :int)))))
