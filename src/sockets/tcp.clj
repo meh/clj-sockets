@@ -106,11 +106,6 @@
       (native/getpeername fd ptr (native/pointer-for :int (.size ptr)))
       (apply address/make (native/from-sockaddr ptr)))))
 
-
-
-
-
-
 (defn client? [socket]
   (assert (instance? Socket socket))
   (= (.mode socket) :client))
