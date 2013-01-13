@@ -128,7 +128,7 @@
 
 (defn client
   ([addr]
-   (condp instance? addr
+   (case (class addr)
      InternetAddress (doto (socket :client 4) (connect addr))
      Internet6Address (doto (socket :client 6) (connect addr))))
   ([host port]
@@ -163,7 +163,7 @@
 
 (defn server
   ([addr]
-   (condp instance? addr
+   (case (class addr)
      InternetAddress (doto (socket :server 4) (bind addr) (listen))
      Internet6Address (doto (socket :server 6) (bind addr) (listen))))
   ([host port]
