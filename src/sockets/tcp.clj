@@ -56,7 +56,7 @@
 (defn option? [name]
   (contains? options name))
 
-(deftype Socket [fd mode version]
+(deftype Socket [fd side version]
   Socket*
   (fd [this]
     fd)
@@ -108,18 +108,18 @@
 
 (defn client? [socket]
   (assert (instance? Socket socket))
-  (= (.mode socket) :client))
+  (= (.side socket) :client))
 
 (defn server? [socket]
   (assert (instance? Socket socket))
-  (= (.mode socket) :server))
+  (= (.side socket) :server))
 
-(defn ^:private socket [mode version]
+(defn ^:private socket [side version]
   (Socket. (native/socket
              (native/domain (versions version))
              (native/mode :stream)
              (native/protocol :ip))
-           mode
+           side
            version))
 
 (defn ^:private connect [socket addr]
