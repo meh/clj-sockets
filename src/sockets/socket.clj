@@ -24,19 +24,19 @@
 
 (defprotocol Socket
   (fd [this])
-  (connect [this addr])
-  (bind [this addr])
-  (listen [this] [this backlog])
-  (accept [this])
-  (recv [this size])
-  (send [this data])
-  (recvfrom [this size])
-  (sendto [this to data])
   (set [this option] [this option data])
   (unset [this option])
-  (get [this option])
+  (get [this option]))
+
+(defprotocol Stateful
+  (recv [this size])
+  (send [this data])
   (local-address [this])
   (remote-address [this]))
+
+(defprotocol Stateless
+  (recv-from [this size])
+  (send-to [this to data]))
 
 (defn close [socket]
   (assert (satisfies? Socket socket))

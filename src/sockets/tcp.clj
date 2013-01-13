@@ -56,37 +56,10 @@
 (defn option? [name]
   (contains? options name))
 
-(deftype Socket [fd version]
+(deftype Socket [fd mode version]
   Socket*
   (fd [this]
     fd)
-
-  (connect [this addr]
-    (assert (address/internet? addr))
-    (let [sockaddr (.native addr)]
-      (native/connect fd sockaddr (.size sockaddr))))
-
-  (bind [this addr]
-    (assert (address/internet? addr))
-    (let [sockaddr (.native addr)]
-      (native/bind fd sockaddr (.size sockaddr))))
-
-  (listen [this]
-    (listen this 4096))
-  (listen [this backlog]
-    (native/listen fd backlog))
-
-  (accept [this]
-    (Socket. (native/accept fd nil nil) version))
-
-  (recv [this size]
-    (let [ptr (Memory. size)]
-      (.getByteBuffer ptr 0 (native/recv fd ptr size 0))))
-
-  (send [this data]
-    (assert (satisfies? Sendable data))
-    (let [[data length] (sendable data)]
-      (native/send fd data length 0)))
 
   (set [this option]
     (if (fd/option? option)
@@ -113,6 +86,16 @@
                                     id ptr (native/size-for type))
                  (.getInt ptr)))))
 
+  Stateful
+  (recv [this size]
+    (let [ptr (Memory. size)]
+      (.getByteBuffer ptr 0 (native/recv fd ptr size 0))))
+
+  (send [this data]
+    (assert (satisfies? Sendable data))
+    (let [[data length] (sendable data)]
+      (native/send fd data length 0)))
+
   (local-address [this]
     (let [ptr (native/create-sockaddr (versions version))]
       (native/getsockname fd ptr (native/pointer-for :int (.size ptr)))
@@ -123,53 +106,84 @@
       (native/getpeername fd ptr (native/pointer-for :int (.size ptr)))
       (apply address/make (native/from-sockaddr ptr)))))
 
-(defn socket [version]
+
+
+
+
+
+(defn client? [socket]
+  (assert (instance? Socket socket))
+  (= (.mode socket) :client))
+
+(defn server? [socket]
+  (assert (instance? Socket socket))
+  (= (.mode socket) :server))
+
+(defn ^:private socket [mode version]
   (Socket. (native/socket
              (native/domain (versions version))
              (native/mode :stream)
              (native/protocol :ip))
+           mode
            version))
+
+(defn ^:private connect [socket addr]
+  (let [sockaddr (.native addr)]
+    (native/connect (fd socket) sockaddr (.size sockaddr))))
 
 (defn client
   ([addr]
    (condp instance? addr
-     InternetAddress (doto (socket 4) (connect addr))
-     Internet6Address (doto (socket 6) (connect addr))))
+     InternetAddress (doto (socket :client 4) (connect addr))
+     Internet6Address (doto (socket :client 6) (connect addr))))
   ([host port]
    (client (address/make host port))))
 
 (defn client4
   ([addr]
    (assert (instance? InternetAddress addr))
-   (socket addr))
+   (client addr))
   ([host port]
    (client4 (address/make host port))))
 
 (defn client6
   ([addr]
    (assert (instance? Internet6Address addr))
-   (socket addr))
+   (client addr))
   ([host port]
    (client6 (address/make host port))))
+
+(defn ^:private bind [this addr]
+  (let [sockaddr (.native addr)]
+    (native/bind fd sockaddr (.size sockaddr))))
+
+(defn ^:private listen
+  ([this]
+   (listen this 4096))
+  ([this backlog]
+   (native/listen fd backlog)))
+
+(defn accept [socket]
+  (Socket. (native/accept (fd socket) nil nil) :client (.version socket)))
 
 (defn server
   ([addr]
    (condp instance? addr
-     InternetAddress (doto (socket 4) (bind addr) (.listen))
-     Internet6Address (doto (socket 6) (bind addr) (.listen))))
+     InternetAddress (doto (socket :server 4) (bind addr) (listen))
+     Internet6Address (doto (socket :server 6) (bind addr) (listen))))
   ([host port]
    (server (address/make host port))))
 
 (defn server4
   ([addr]
    (assert (instance? InternetAddress addr))
-   (socket addr))
+   (server addr))
   ([host port]
    (server4 (address/make host port))))
 
 (defn server6
   ([addr]
    (assert (instance? Internet6Address addr))
-   (socket addr))
+   (server addr))
   ([host port]
    (server6 (address/make host port))))
