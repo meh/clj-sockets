@@ -159,6 +159,7 @@
    (native/listen fd backlog)))
 
 (defn accept [socket]
+  (assert (instance? Socket socket))
   (Socket. (native/accept (fd socket) nil nil) :client (.version socket)))
 
 (defn server
