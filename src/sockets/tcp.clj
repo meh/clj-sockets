@@ -96,6 +96,7 @@
     (let [[data length] (sendable data)]
       (native/send fd data length 0)))
 
+  Addressable
   (local-address [this]
     (let [ptr (native/create-sockaddr (versions version))]
       (native/getsockname fd ptr (native/pointer-for :int (.size ptr)))

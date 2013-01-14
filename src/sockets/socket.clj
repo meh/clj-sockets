@@ -28,11 +28,13 @@
   (unset [this option])
   (get [this option]))
 
-(defprotocol Stateful
-  (recv [this size])
-  (send [this data])
+(defprotocol Addressable
   (local-address [this])
   (remote-address [this]))
+
+(defprotocol Stateful
+  (recv [this size])
+  (send [this data]))
 
 (defprotocol Stateless
   (recv-from [this size])
