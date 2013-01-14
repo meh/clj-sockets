@@ -168,10 +168,11 @@
 (defmethod to-sockaddr :unix [_ path]
   (if (> (count path) 107)
     (throw (IllegalArgumentException. "path is too long"))
-    (doto (create-sockaddr :unix)
-      (.clear)
-      (.write 0 (short-array [(short (:unix domain))]) 0 1)
-      (.write 2 (char-array path) 0 1))))
+    (let [path (.getBytes path "UTF-8")]
+      (doto (create-sockaddr :unix)
+        (.clear)
+        (.write 0 (short-array [(short (:unix domain))]) 0 1)
+        (.write 2 path 0 (alength path))))))
 
 (defmethod to-sockaddr :inet [_ ip port]
   (doto (create-sockaddr :inet)
