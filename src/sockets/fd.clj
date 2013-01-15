@@ -37,7 +37,8 @@
                            :reuse-addr   [0x04 :bool]
                            :keep-alive   [0x08 :bool]
                            :linger       [0x80 :bool]
-                           :do-not-route [0x10 :bool]}))
+                           :do-not-route [0x10 :bool]}
+    {}))
 
 (defonce ^:private socket-level
   (case (System/getProperty "os.name")

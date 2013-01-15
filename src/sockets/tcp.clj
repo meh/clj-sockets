@@ -47,7 +47,7 @@
     ("Mac OS" "Mac OS X") {:no-delay       [0x001 :bool]
                            :keep-interval  [0x200 :int]
                            :keep-count     [0x400 :int]
-                           :md5-signatures [0x010 :bool]}))
+    {}))
 
 (defonce ^:private versions
   {4 :inet
