@@ -122,7 +122,7 @@
   (Socket. (native/socket
              (native/domain (versions version))
              (native/mode :stream)
-             (native/protocol :ip))
+             (native/protocol :tcp))
            side
            version))
 
