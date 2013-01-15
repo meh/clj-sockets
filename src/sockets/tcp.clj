@@ -77,15 +77,17 @@
       (set this option false)))
 
   (get [this option]
-    (assert (option? option))
-    (let [[id type] (options name), ptr (native/pointer-for type)]
-      (case type
-        :bool (do (native/getsockopt fd (native/protocol :tcp)
-                                     id ptr (native/size-for type))
-                  (not (zero? (.getInt ptr))))
-        :int (do (native/getsockopt fd (native/protocol :tcp)
-                                    id ptr (native/size-for type))
-                 (.getInt ptr)))))
+    (if (fd/option? option)
+      (fd/get fd option)
+      (let [[id type] (options name)
+            ptr (native/pointer-for type)]
+        (case type
+          :bool (do (native/getsockopt fd (native/protocol :tcp)
+                                       id ptr (native/size-for type))
+                    (not (zero? (.getInt ptr))))
+          :int (do (native/getsockopt fd (native/protocol :tcp)
+                                      id ptr (native/size-for type))
+                   (.getInt ptr))))))
 
   Stateful
   (recv [this size]
