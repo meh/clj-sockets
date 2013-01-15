@@ -68,7 +68,8 @@
   (set [this option data]
     (assert (option? option))
     (let [[id type] (options name)]
-      (native/setsockopt fd (native/protocol :tcp) id (native/pointer-for type data) (native/size-for type))))
+      (native/setsockopt fd (native/protocol :tcp)
+                         id (native/pointer-for type data) (native/size-for type))))
 
   (unset [this option]
     (if (fd/option? option)
