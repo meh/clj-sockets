@@ -46,7 +46,7 @@
 
     ("Mac OS" "Mac OS X") {:no-delay       [0x001 :bool]
                            :keep-interval  [0x200 :int]
-                           :keep-count     [0x400 :int]
+                           :keep-count     [0x400 :int]}
     {}))
 
 (defonce ^:private versions
@@ -132,7 +132,7 @@
 
 (defn client
   ([addr]
-   (case (class addr)
+   (condp instance? addr
      InternetAddress (doto (socket :client 4) (connect addr))
      Internet6Address (doto (socket :client 6) (connect addr))))
   ([host port]
@@ -168,7 +168,7 @@
 
 (defn server
   ([addr]
-   (case (class addr)
+   (condp instance? addr
      InternetAddress (doto (socket :server 4) (bind addr) (listen))
      Internet6Address (doto (socket :server 6) (bind addr) (listen))))
   ([host port]
