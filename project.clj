@@ -1,4 +1,4 @@
-(defproject meh/sockets "0.1.0-SNAPSHOT"
+(defproject meh/sockets "0.0.1"
   :description "POSIX sockets"
   :url "https://github.com/meh/clj-sockets"
   :license {:name "LGPL"
