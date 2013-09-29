@@ -148,7 +148,7 @@
 
 (defn ^:private bind [this addr]
   (let [sockaddr (.native addr)]
-    (native/bind fd sockaddr (.size sockaddr))))
+    (native/bind (fd this) sockaddr (.size sockaddr))))
 
 (defn server
   ([addr]

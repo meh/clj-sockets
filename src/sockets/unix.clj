@@ -96,13 +96,13 @@
 
 (defn ^:private bind [this addr]
   (let [sockaddr (.native addr)]
-    (native/bind fd sockaddr (.size sockaddr))))
+    (native/bind (fd this) sockaddr (.size sockaddr))))
 
 (defn ^:private listen
   ([this]
    (listen this 4096))
   ([this backlog]
-   (native/listen fd backlog)))
+   (native/listen (fd this) fd backlog)))
 
 (defn accept [socket]
   (assert (instance? Socket socket))
